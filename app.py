@@ -5,20 +5,19 @@ import jwt, os, time
 app = Flask(__name__)
 CORS(app)
 
-LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')        # required
-LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')  # required
-LIVEKIT_WS_URL = os.getenv('LIVEKIT_WS_URL', 'wss://mochai-j3b8jbmd.livekit.cloud')
+LIVEKIT_API_KEY    = os.getenv('LIVEKIT_API_KEY')
+LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
+LIVEKIT_WS_URL     = os.getenv('LIVEKIT_WS_URL', 'wss://mochai-j3b8jbmd.livekit.cloud')
 
 def generate_token(room_name: str, identity: str) -> str:
     if not LIVEKIT_API_KEY or not LIVEKIT_API_SECRET:
         return None
     now = int(time.time())
     payload = {
-        'iss': LIVEKIT_API_KEY,          # API key ID
-        'sub': identity,                 # participant identity
-        'exp': now + 3600,
+        'iss': LIVEKIT_API_KEY,     # API key ID
+        'sub': identity,            # participant identity
         'nbf': now,
-        # LiveKit video grant
+        'exp': now + 3600,
         'video': {
             'room': room_name,
             'roomJoin': True,
@@ -26,7 +25,6 @@ def generate_token(room_name: str, identity: str) -> str:
             'canSubscribe': True,
             'canPublishData': True,
         },
-        # Optional nice-to-haves
         'name': identity,
         'metadata': '',
     }
@@ -35,13 +33,16 @@ def generate_token(room_name: str, identity: str) -> str:
 @app.route('/token', methods=['GET'])
 def get_token():
     room_name = request.args.get('roomName', 'agent-room')
-    identity = request.args.get('participantName', 'unity-client')
+    identity  = request.args.get('participantName', 'unity-client')
     token = generate_token(room_name, identity)
     if not token:
         return jsonify({'error': 'Failed to generate token'}), 500
     return jsonify({
         'serverUrl': LIVEKIT_WS_URL,          # exact Cloud URL
-        'participantToken': token,            # field name client accepts
+        'participantToken': token,            # client supports this name
         'roomName': room_name,
         'participantName': identity,
     })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
